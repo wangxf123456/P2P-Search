@@ -1,0 +1,1 @@
+rm *.pdf ./download_files/* ./download_torrents/* ./torrents/* test
