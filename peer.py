@@ -24,9 +24,9 @@ class Peer():
 	hash_map = {}
 	downloading_files = {}
 	server_ip = "192.168.1.100"
-	server_port = 0
+	server_port = 60291
 	tracker_ip = "192.168.1.100"
-	tracker_port = 0
+	tracker_port = 60187
 	peer_host = ""
 	peer_port = 0
 
@@ -34,27 +34,27 @@ class Peer():
 		thread = Thread(target = self.download_request_handler, args = ())
 		thread.start()
 		# self.server_ip = raw_input("Input server ip: ")
-		self.server_port = int(raw_input("Input server port: "))
+		# self.server_port = int(raw_input("Input server port: "))
 		# self.tracker_ip = raw_input("Input tracker ip: ")
-		self.tracker_port = int(raw_input("Input tracker port: "))
+		# self.tracker_port = int(raw_input("Input tracker port: "))
 
 		if not os.path.exists(self.files_download_path):
 			os.makedirs(self.files_download_path)
 		if not os.path.exists(self.torrents_download_path):
 			os.makedirs(self.torrents_download_path)
 
-		while True:
-			operation = raw_input("input operation num: ")
-			if operation == str(0):
-				print "1: request torrent list\n2: download torrent\n3: download file\n4:upload file"
-			elif operation == str(1):
-				self.request_torrent_list()
-			elif operation == str(2):
-				self.download_torrent()
-			elif operation == str(3):
-				self.download_file()
-			elif operation == str(4):
-				self.upload_file()	
+		# while True:
+		# 	operation = raw_input("input operation num: ")
+		# 	if operation == str(0):
+		# 		print "1: request torrent list\n2: download torrent\n3: download file\n4:upload file"
+		# 	elif operation == str(1):
+		# 		self.request_torrent_list()
+		# 	elif operation == str(2):
+		# 		self.download_torrent()
+		# 	elif operation == str(3):
+		# 		self.download_file()
+		# 	elif operation == str(4):
+		# 		self.upload_file()	
 
 	def request_torrent_list(self):
 		s = socket.socket()
@@ -65,10 +65,14 @@ class Peer():
 		f_list = []
 		print "total file num:", f_num
 		for i in range(int(f_num)):
+			t_name = s.recv(header.MAX_FILENAME_LEN).replace('\0', '')
 			f_name = s.recv(header.MAX_FILENAME_LEN).replace('\0', '')
-			f_list.append(f_name)
+			f_size = struct.unpack('I', s.recv(header.INT_SIZE))[0]
+			record = (t_name, f_name, f_size)
+			f_list.append(record)
 		print "torrent files are: ", f_list
 		s.close()
+		return f_list
 
 	def download_torrent(self):
 		s = socket.socket()

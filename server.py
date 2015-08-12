@@ -39,9 +39,14 @@ def get_torrent_list_handler(client):
 	# first send how many files will be sent
 	client.send(struct.pack('I', len(torr_lst)))
 
-	# send file names
-	for torr_names in torr_lst:
-		client.send(torr_names + '\0' * (header.MAX_FILENAME_LEN - len(torr_names)))
+	# send torrent name, file name, file size
+	for torr_name in torr_lst:
+		client.send(torr_name + '\0' * (header.MAX_FILENAME_LEN - len(torr_name)))
+		f = open(torrents_folder_path + '/' + torr_name)
+		f_name = f.readline().replace('\n', '')
+		client.send(f_name + '\0' * (header.MAX_FILENAME_LEN - len(f_name)))
+		f_size = int(f.readline())
+		client.send(struct.pack('I', f_size))
 
 	print "finish get torrent list request"
 
