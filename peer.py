@@ -1,4 +1,4 @@
-import socket, header, struct, os, hashlib, sys
+import socket, header, struct, os, hashlib, sys, signal
 from threading import Thread, Lock
 
 class chunk_record():
@@ -24,37 +24,20 @@ class Peer():
 	hash_map = {}
 	downloading_files = {}
 	server_ip = "192.168.1.100"
-	server_port = 60291
+	server_port = 56751
 	tracker_ip = "192.168.1.100"
-	tracker_port = 60187
+	tracker_port = 56752
 	peer_host = ""
 	peer_port = 0
 
 	def start(self):
 		thread = Thread(target = self.download_request_handler, args = ())
 		thread.start()
-		# self.server_ip = raw_input("Input server ip: ")
-		# self.server_port = int(raw_input("Input server port: "))
-		# self.tracker_ip = raw_input("Input tracker ip: ")
-		# self.tracker_port = int(raw_input("Input tracker port: "))
 
 		if not os.path.exists(self.files_download_path):
 			os.makedirs(self.files_download_path)
 		if not os.path.exists(self.torrents_download_path):
 			os.makedirs(self.torrents_download_path)
-
-		# while True:
-		# 	operation = raw_input("input operation num: ")
-		# 	if operation == str(0):
-		# 		print "1: request torrent list\n2: download torrent\n3: download file\n4:upload file"
-		# 	elif operation == str(1):
-		# 		self.request_torrent_list()
-		# 	elif operation == str(2):
-		# 		self.download_torrent()
-		# 	elif operation == str(3):
-		# 		self.download_file()
-		# 	elif operation == str(4):
-		# 		self.upload_file()	
 
 	def request_torrent_list(self):
 		s = socket.socket()
@@ -74,12 +57,11 @@ class Peer():
 		s.close()
 		return f_list
 
-	def download_torrent(self):
+	def download_torrent(self, f_name):
 		s = socket.socket()
 		s.connect((self.server_ip, self.server_port))
 		s.send(struct.pack('I', header.DOWNLOAD_TORRENT))
 		
-		f_name = raw_input("Input file name: ")
 		s.send(f_name + '\0' * (header.MAX_FILENAME_LEN - len(f_name)))
 
 		f = open(self.torrents_download_path + '/' + f_name, 'wb+')
@@ -93,6 +75,9 @@ class Peer():
 			pos += len(data)
 		print f_name, "torrent downloaded"
 		s.close()
+		# gg
+		if self.parent is not None:
+			self.parent.finishDownloadTorrentHandler(f_name)
 
 	def download_request_handler(self):
 		s = socket.socket()
@@ -129,8 +114,7 @@ class Peer():
 		client.send(data)
 		client.close()
 
-	def download_file(self):
-		t_name = raw_input("Input torrent name: ")
+	def download_file(self, t_name):
 		t = open(self.torrents_download_path + '/' + t_name)
 		assert(t != None)
 		f_name = t.readline().replace('\n', '')
@@ -198,8 +182,7 @@ class Peer():
 		s.close()
 		f.close()
 
-	def upload_file(self):
-		f_path = raw_input("Input file path: ")
+	def upload_file(self, f_path):
 		f_name = f_path.split('/')[-1]
 		print "file name is:", f_name
 		f = open(f_path)
@@ -210,7 +193,6 @@ class Peer():
 			data = f.read(header.CHUNK_SIZE)
 			if not data:
 				break
-			print len(data)
 			f_size += len(data)
 			sha1 = hashlib.sha1()
 			sha1.update(data)
@@ -228,15 +210,21 @@ class Peer():
 		s = socket.socket()
 		s.connect((self.server_ip, self.server_port))
 		s.send(struct.pack('I', header.SERVER_UPLOAD_FILE))
-		print f_name
-		s.send(f_name + '\0' * (header.MAX_FILENAME_LEN - len(f_name)))
+
+		print "send", f_name, len(f_name)
+		s.send(struct.pack('I', len(f_name)))
+		s.send(f_name)
+
 		s.send(struct.pack('I', f_size))
 		count = len(hash_list)
 		print "send server hash count:", count
 		s.send(struct.pack('I', count))
 		for i in range(count):
 			s.send(hash_list[i])
-		s.send(self.tracker_ip + '\0' * (header.MAX_IP_LEN - len(self.tracker_ip)))
+
+		s.send(struct.pack('I', len(self.tracker_ip)))
+		s.send(self.tracker_ip)
+
 		s.send(struct.pack('I', self.tracker_port))
 		s.close()
 
@@ -255,6 +243,10 @@ class Peer():
 		for i in range(count):
 			s.send(hash_list[i])
 		s.close()
+
+	# used for interface
+	def set_parent(self, parent):
+		self.parent = parent
 
 def test():
 	s = socket.socket()

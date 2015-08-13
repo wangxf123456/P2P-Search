@@ -44,7 +44,8 @@ def get_chunk_ip_handler(client):
 
 def put_chunk_ip_handler(client):
 	print "handle put chunk ip request"
-	ip = client.recv(header.MAX_IP_LEN).replace('\0', '')
+	ip = client.recv(header.MAX_IP_LEN)
+	ip = ip.replace('\0', '')
 	print "get ip:", ip
 	port = struct.unpack('I', client.recv(header.INT_SIZE))[0]
 	print "get port:", port
@@ -56,7 +57,8 @@ def put_chunk_ip_handler(client):
 		chunk_hash = client.recv(header.SHA1_LEN)
 		map_lock.acquire()
 		if chunk_hash in tracker_ip_map:
-			tracker_ip_map[chunk_hash].append(ip_port)
+			if ip_port not in tracker_ip_map[chunk_hash]:
+				tracker_ip_map[chunk_hash].append(ip_port)
 		else:
 			tracker_ip_map[chunk_hash] = [ip_port]
 		map_lock.release()

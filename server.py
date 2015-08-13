@@ -79,7 +79,10 @@ def download_torrent_handler(client):
 
 def upload_torrent_handler(client):
 	print "handle upload torrent request"
-	f_name = client.recv(header.MAX_FILENAME_LEN).replace('\0', '')
+	f_name_len = struct.unpack('I', client.recv(header.INT_SIZE))[0]
+	print "get file name len:", f_name_len
+	f_name = client.recv(f_name_len)
+	print "before:", f_name, len(f_name)
 	f_name = f_name.replace('.', '_')
 	print "get file name:", f_name, len(f_name)
 
@@ -94,7 +97,8 @@ def upload_torrent_handler(client):
 	f.write(str(count) + "\n")
 	for i in range(count):
 		f.write(client.recv(header.SHA1_LEN) + "\n")
-	tracker_ip = client.recv(header.MAX_IP_LEN).replace('\0', '')
+	tracker_ip_len = struct.unpack('I', client.recv(header.INT_SIZE))[0]
+	tracker_ip = client.recv(tracker_ip_len)
 	print "get tracker ip:", tracker_ip
 	tracker_port = struct.unpack('I', client.recv(header.INT_SIZE))[0]
 	f.write(tracker_ip + ":" + str(tracker_port))
